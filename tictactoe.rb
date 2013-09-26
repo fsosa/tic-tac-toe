@@ -40,6 +40,10 @@ class Board
 		return legalMoves
 	end
 
+	def undoMove(loc)
+		@grid[loc] = nil
+	end
+
 	def makeMove (marker, loc)
 		if (loc < 0 || loc > 8)
 			p "INVALID MOVE: CAN'T MOVE THERE"
@@ -144,12 +148,11 @@ end
 class AI
 
 	def move (player, board)
-		# move = find_best_move(player, board)
-		move = negamaxx(1, board)
+		move = negamaxx(player, board, 1)
 		board.makeMove(player, move)
 	end
 
-	def negamaxx (player, board, alpha=-10000, beta=10000)
+	def negamaxx (player, board, depth, alpha=-10000, beta=10000)
 		best_move = 0
 		best_alpha = -10000
 		opponent = player * -1
@@ -159,68 +162,12 @@ class AI
 		end
 
 		board.legalMoves.each do |move|
-			child_board = Board.new
-			child_board.grid = Array.new(board.grid)
-			child_board.makeMove(player, move)
+			board.makeMove(player, move)
 
-			score = -negamax(opponent, child_board, -beta, -alpha)
+			# Score the opponents result recursively
+			score = -negamaxx(opponent, board, depth + 1, -beta, -alpha)
 
-			if score > alpha
-				alpha = score
-			end
-
-			if alpha >= beta
-				break
-			end
-
-			if alpha > best_alpha
-				best_alpha = alpha
-				best_move = move
-			end
-
-		end
-
-		return best_move
-
-	end
-
-
-	def find_best_move (player, board)
-		best_move = 0
-		best_alpha = -10000
-		opponent = 1
-
-		board.legalMoves.each do |move|
-			child_board = Board.new
-			child_board.grid = Array.new(board.grid)
-			child_board.makeMove(player, move)
-
-
-			alpha = -negamax(opponent, child_board, -10000, 10000)
-
-			if alpha > best_alpha
-				best_alpha = alpha
-				best_move = move
-			end
-		end
-
-		return best_move
-	end
-
-
-	def negamax (player, board, alpha, beta)
-		opponent = -player
-
-		if board.game_complete?
-			return score(player, board)
-		end
-
-		board.legalMoves.each do |move|
-			child_board = Board.new
-			child_board.grid = Array.new(board.grid)
-			child_board.makeMove(player, move)
-
-			score = -negamax(opponent, child_board, -beta, -alpha)
+			board.undoMove(move)
 
 			if score > alpha
 				alpha = score
@@ -230,9 +177,18 @@ class AI
 				break
 			end
 
+			if depth == 1 && alpha > best_alpha
+				best_alpha = alpha
+				best_move  = move
+			end
+
 		end
 
-		return alpha
+		if depth == 1
+			return best_move
+		else
+			return alpha
+		end
 
 	end
 
